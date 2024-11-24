@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+  <!-- [Previous head and style sections remain the same] -->
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Buoy Bros Game</title>
+    <style>
+      body {
+        margin: 0;
+        overflow: hidden;
+      }
+      canvas {
+        display: block;
+      }
+      #score {
+        position: fixed;
+        top: 20px;
+        left: 20px;
+        color: white;
+        font-size: 24px;
+        font-family: Arial, sans-serif;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="score">Score: 0</div>
+    <canvas id="gameCanvas"></canvas>
+    <script>
+      const canvas = document.getElementById('gameCanvas');
+      const ctx = canvas.getContext('2d');
+      const scoreElement = document.getElementById('score');
+
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+
+      // Load all images
+      const backgroundImg = new Image();
+      const buoyImg = new Image();
+      const collectibleImg = new Image();
+
+      backgroundImg.src = 'windPark_retro.webp';
+      buoyImg.src = 'buoyRendering.ico';
+      collectibleImg.src = 'collectible_6.png';
+
+      // Obstacle images array
+      const obstacleImgs = [];
+      const obstacleImageSources = [
+        'obstacle_1.png',
+        'obstacle_2.png',
+        'obstacle_3.png',
+        'obstacle_4.png',
+      ];
+
+      // Load obstacle images
+      for (let i = 0; i < obstacleImageSources.length; i++) {
+        const img = new Image();
+        img.src = obstacleImageSources[i];
+        obstacleImgs.push(img);
+      }
+
+      // Game state
+      let score = 0;
+      let gameOver = false;
+
+      // Camera and world properties
+      const worldWidth = canvas.width * 5; // Made world wider for more obvious scrolling
+      let cameraX = 0;
+
+      // Player properties
+      const player = {
+        worldX: 100, // Actual position in the world
+        screenX: 100, // Position on screen
+        y: canvas.height / 2,
+        width: 60,
+        height: 60,
+        speed: 5,
+        vy: 0,
+        gravity: 0.5,
+        jumpStrength: -15,
+        isJumping: false,
+      };
+
+      // Arrays for obstacles and collectibles
+      const obstacles = [];
+      const collectibles = [];
+
+      // Obstacle and collectible properties
+      const OBSTACLE_WIDTH = 100;
+      const OBSTACLE_HEIGHT = 100;
+      const COLLECTIBLE_SIZE = 60;
+      const SPAWN_INTERVAL = 2000;
+
+      // Controls
+      let keys = {};
+
+      window.addEventListener('keydown', (e) => {
+        keys[e.code] = true;
+        if ((e.code === 'Space' || e.code === 'ArrowUp') && !player.isJumping) {
+          player.vy = player.jumpStrength;
+          player.isJumping = true;
+        }
+      });
+
+      window.addEventListener('keyup', (e) => {
+        keys[e.code] = false;
+      });
+
+      function updatePlayer() {
+        // Vertical movement
+        player.vy += player.gravity;
+        player.y += player.vy;
+
+        // Horizontal movement in world space
+        if (keys['ArrowRight']) {
+          player.worldX += player.speed;
+          // Keep player in right half of screen when moving right
+          player.screenX = Math.min(
+            canvas.width * 0.6,
+            player.screenX + player.speed,
+          );
+        }
+        if (keys['ArrowLeft']) {
+          player.worldX -= player.speed;
+          // Allow player to move left on screen only if not at world start
+          if (player.worldX > canvas.width * 0.2) {
+            player.screenX = Math.max(
+              canvas.width * 0.2,
+              player.screenX - player.speed,
+            );
+          }
+        }
+
+        // World boundaries
+        player.worldX = Math.max(
+          0,
+          Math.min(player.worldX, worldWidth - player.width),
+        );
+
+        // Update camera to follow player
+        if (player.worldX > canvas.width * 0.6) {
+          // Start scrolling when player reaches 60% of first screen
+          cameraX = player.worldX - canvas.width * 0.6;
+        }
+        cameraX = Math.max(0, Math.min(cameraX, worldWidth - canvas.width));
+
+        // Ground collision
+        const groundLevel = canvas.height - player.height - 50;
+        if (player.y > groundLevel) {
+          player.y = groundLevel;
+          player.vy = 0;
+          player.isJumping = false;
+        }
+      }
+
+      function spawnObstacle() {
+        const obstacle = {
+          x: cameraX + canvas.width + Math.random() * 500, // Spawn ahead of current view
+          y: canvas.height - Math.random() * 200 - 50,
+          width: OBSTACLE_WIDTH,
+          height: OBSTACLE_HEIGHT,
+          speed: 3 + Math.random() * 2,
+          worldX: cameraX + canvas.width + Math.random() * 500,
+          img: obstacleImgs[Math.floor(Math.random() * obstacleImgs.length)], // Assign a random image
+        };
+        obstacles.push(obstacle);
+      }
+
+      function spawnCollectible() {
+        const collectible = {
+          x: cameraX + canvas.width + Math.random() * 500,
+          y: canvas.height - Math.random() * 250 - 50,
+          width: COLLECTIBLE_SIZE,
+          height: COLLECTIBLE_SIZE,
+          speed: 3,
+          collected: false,
+          worldX: cameraX + canvas.width + Math.random() * 500,
+        };
+        collectibles.push(collectible);
+      }
+
+      function updateObstacles() {
+        for (let i = obstacles.length - 1; i >= 0; i--) {
+          // Move obstacle left
+          obstacles[i].worldX -= obstacles[i].speed;
+          obstacles[i].x = obstacles[i].worldX;
+
+          // Calculate screen position
+          const screenX = obstacles[i].x - cameraX;
+
+          // Check collision using screen coordinates
+          if (
+            checkCollision(
+              {
+                x: player.screenX,
+                y: player.y,
+                width: player.width,
+                height: player.height,
+              },
+              {
+                x: screenX,
+                y: obstacles[i].y,
+                width: obstacles[i].width,
+                height: obstacles[i].height,
+              },
+            )
+          ) {
+            gameOver = true;
+          }
+
+          // Remove if far behind camera view
+          if (obstacles[i].x + obstacles[i].width < cameraX - canvas.width) {
+            obstacles.splice(i, 1);
+          }
+        }
+      }
+
+      function updateCollectibles() {
+        for (let i = collectibles.length - 1; i >= 0; i--) {
+          // Move collectible left
+          collectibles[i].worldX -= collectibles[i].speed;
+          collectibles[i].x = collectibles[i].worldX;
+
+          // Calculate screen position
+          const screenX = collectibles[i].x - cameraX;
+
+          if (
+            !collectibles[i].collected &&
+            checkCollision(
+              {
+                x: player.screenX,
+                y: player.y,
+                width: player.width,
+                height: player.height,
+              },
+              {
+                x: screenX,
+                y: collectibles[i].y,
+                width: collectibles[i].width,
+                height: collectibles[i].height,
+              },
+            )
+          ) {
+            collectibles[i].collected = true;
+            score += 10;
+            scoreElement.textContent = `Score: ${score}`;
+          }
+
+          // Remove if collected or far behind
+          if (
+            collectibles[i].collected ||
+            collectibles[i].x + collectibles[i].width < cameraX - canvas.width
+          ) {
+            collectibles.splice(i, 1);
+          }
+        }
+      }
+
+      function drawBackground() {
+        // Calculate how many background tiles we need
+        const bgWidth = canvas.width;
+        const numTiles = Math.ceil(canvas.width / bgWidth) + 1;
+
+        for (let i = 0; i < numTiles; i++) {
+          const bgX = i * bgWidth - (cameraX % bgWidth);
+          try {
+            ctx.drawImage(backgroundImg, bgX, 0, bgWidth, canvas.height);
+          } catch (e) {
+            // Fallback background
+            ctx.fillStyle = '#87CEEB';
+            ctx.fillRect(bgX, 0, bgWidth, canvas.height);
+          }
+        }
+
+        // Draw distance indicator
+        ctx.fillStyle = 'white';
+        ctx.font = '20px Arial';
+        ctx.fillText(`Distance: ${Math.floor(player.worldX)}`, 20, 60);
+      }
+
+      function drawPlayer() {
+        try {
+          ctx.drawImage(
+            buoyImg,
+            player.screenX,
+            player.y,
+            player.width,
+            player.height,
+          );
+        } catch (e) {
+          ctx.fillStyle = 'red';
+          ctx.fillRect(player.screenX, player.y, player.width, player.height);
+        }
+      }
+
+      function drawObstacles() {
+        obstacles.forEach((obstacle) => {
+          const screenX = obstacle.x - cameraX;
+          if (screenX + obstacle.width > 0 && screenX < canvas.width) {
+            try {
+              ctx.drawImage(
+                obstacle.img, // Use the assigned image
+                screenX,
+                obstacle.y,
+                obstacle.width,
+                obstacle.height,
+              );
+            } catch (e) {
+              ctx.fillStyle = 'brown';
+              ctx.fillRect(
+                screenX,
+                obstacle.y,
+                obstacle.width,
+                obstacle.height,
+              );
+            }
+          }
+        });
+      }
+
+      function drawCollectibles() {
+        collectibles.forEach((collectible) => {
+          if (!collectible.collected) {
+            const screenX = collectible.x - cameraX;
+            if (screenX + collectible.width > 0 && screenX < canvas.width) {
+              try {
+                ctx.drawImage(
+                  collectibleImg,
+                  screenX,
+                  collectible.y,
+                  collectible.width,
+                  collectible.height,
+                );
+              } catch (e) {
+                ctx.fillStyle = 'gold';
+                ctx.beginPath();
+                ctx.arc(
+                  screenX + collectible.width / 2,
+                  collectible.y + collectible.height / 2,
+                  collectible.width / 2,
+                  0,
+                  Math.PI * 2,
+                );
+                ctx.fill();
+              }
+            }
+          }
+        });
+      }
+
+      function drawSea() {
+        ctx.fillStyle = 'rgba(30, 144, 255, 0.6)';
+        ctx.fillRect(0, canvas.height - 50, canvas.width, 50);
+      }
+
+      function checkCollision(rect1, rect2) {
+        return (
+          rect1.x < rect2.x + rect2.width &&
+          rect1.x + rect1.width > rect2.x &&
+          rect1.y < rect2.y + rect2.height &&
+          rect1.y + rect1.height > rect2.y
+        );
+      }
+
+      function drawGameOver() {
+        if (gameOver) {
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+          ctx.fillStyle = 'white';
+          ctx.font = '48px Arial';
+          ctx.textAlign = 'center';
+          ctx.fillText('Game Over!', canvas.width / 2, canvas.height / 2);
+          ctx.font = '24px Arial';
+          ctx.fillText(
+            `Final Score: ${score}`,
+            canvas.width / 2,
+            canvas.height / 2 + 50,
+          );
+          ctx.fillText(
+            'Press Space to Restart',
+            canvas.width / 2,
+            canvas.height / 2 + 100,
+          );
+        }
+      }
+
+      // Spawn objects periodically
+      setInterval(() => {
+        if (!gameOver) {
+          if (Math.random() < 0.5) {
+            spawnObstacle();
+          } else {
+            spawnCollectible();
+          }
+        }
+      }, SPAWN_INTERVAL);
+
+      function gameLoop() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        if (!gameOver) {
+          updatePlayer();
+          updateObstacles();
+          updateCollectibles();
+        }
+
+        drawBackground();
+        drawSea();
+        drawPlayer();
+        drawObstacles();
+        drawCollectibles();
+        drawGameOver();
+
+        requestAnimationFrame(gameLoop);
+      }
+
+      // Start game loop
+      gameLoop();
+
+      // Restart game handler
+      window.addEventListener('keydown', (e) => {
+        if (gameOver && e.code === 'Space') {
+          gameOver = false;
+          score = 0;
+          scoreElement.textContent = `Score: ${score}`;
+          player.worldX = 100;
+          player.screenX = 100;
+          player.y = canvas.height / 2;
+          player.vy = 0;
+          cameraX = 0;
+          obstacles.length = 0;
+          collectibles.length = 0;
+        }
+      });
+
+      // Handle window resizing
+      window.addEventListener('resize', () => {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+      });
+    </script>
+  </body>
+</html>
