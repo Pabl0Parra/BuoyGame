@@ -82,6 +82,9 @@
         jumpsLeft: 2,
         jumpStrength: -15,
         isJumping: false,
+        isFlipped: false, // New property to track flipped state
+        flipProgress: 0, // To handle flip animation
+        flipDuration: 60, // Frames for the flip animation
       };
 
       // Jump properties
@@ -162,6 +165,14 @@
           player.vy = 0;
           player.jumpsLeft = 2; // Reset jumps when landing
         }
+
+        // Handle flip animation
+        if (player.isFlipped) {
+          player.flipProgress++;
+          if (player.flipProgress >= player.flipDuration) {
+            gameOver = true; // End the game after the flip
+          }
+        }
       }
 
       function spawnObstacle() {
@@ -231,6 +242,7 @@
 
           // Check collision using screen coordinates
           if (
+            !player.isFlipped && // Prevent multiple flips
             checkCollision(
               {
                 x: player.screenX,
@@ -246,7 +258,7 @@
               },
             )
           ) {
-            gameOver = true;
+            player.isFlipped = true; // Start flip animation
           }
 
           // Remove if far behind camera view
@@ -312,6 +324,7 @@
         }
         scoreElement.textContent = `Score: ${score}`;
       }
+
       function drawBackground() {
         // Calculate how many background tiles we need
         const bgWidth = canvas.width;
@@ -335,18 +348,43 @@
       }
 
       function drawPlayer() {
-        try {
+        ctx.save(); // Save the current state
+
+        // Determine the center of the player for rotation
+        const centerX = player.screenX + player.width / 2;
+        const centerY = player.y + player.height / 2;
+
+        if (player.isFlipped) {
+          // Calculate rotation angle based on flip progress
+          const rotation =
+            (player.flipProgress / player.flipDuration) * Math.PI; // 0 to 180 degrees
+
+          ctx.translate(centerX, centerY);
+          ctx.rotate(rotation);
           ctx.drawImage(
             buoyImg,
-            player.screenX,
-            player.y,
+            -player.width / 2,
+            -player.height / 2,
             player.width,
             player.height,
           );
-        } catch (e) {
-          ctx.fillStyle = 'red';
-          ctx.fillRect(player.screenX, player.y, player.width, player.height);
+        } else {
+          // Normal rendering
+          try {
+            ctx.drawImage(
+              buoyImg,
+              player.screenX,
+              player.y,
+              player.width,
+              player.height,
+            );
+          } catch (e) {
+            ctx.fillStyle = 'red';
+            ctx.fillRect(player.screenX, player.y, player.width, player.height);
+          }
         }
+
+        ctx.restore(); // Restore the original state
       }
 
       function drawObstacles() {
@@ -408,6 +446,7 @@
           }
         });
       }
+
       function drawSea() {
         ctx.fillStyle = 'rgba(30, 144, 255, 0.6)';
         ctx.fillRect(0, canvas.height - 50, canvas.width, 50);
@@ -494,6 +533,8 @@
           cameraX = 0;
           obstacles.length = 0;
           collectibles.length = 0;
+          player.isFlipped = false; // Reset flipped state
+          player.flipProgress = 0; // Reset flip progress
         }
       });
 
