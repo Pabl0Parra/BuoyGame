@@ -214,6 +214,8 @@
           collected: false,
           worldX: cameraX + canvas.width + Math.random() * 500,
           isSpecial: true,
+          animationState: 'normal', // Can be 'normal', 'growing', or 'exploding'
+          animationProgress: 0,
         };
         collectibles.push(specialCollectible);
       }
@@ -256,11 +258,13 @@
 
       function updateCollectibles() {
         for (let i = collectibles.length - 1; i >= 0; i--) {
-          collectibles[i].worldX -= collectibles[i].speed;
-          collectibles[i].x = collectibles[i].worldX;
-          const screenX = collectibles[i].x - cameraX;
+          const collectible = collectibles[i];
+          collectible.worldX -= collectible.speed;
+          collectible.x = collectible.worldX;
+          const screenX = collectible.x - cameraX;
+
           if (
-            !collectibles[i].collected &&
+            !collectible.collected &&
             checkCollision(
               {
                 x: player.screenX,
@@ -270,25 +274,44 @@
               },
               {
                 x: screenX,
-                y: collectibles[i].y,
-                width: collectibles[i].width,
-                height: collectibles[i].height,
+                y: collectible.y,
+                width: collectible.width,
+                height: collectible.height,
               },
             )
           ) {
-            collectibles[i].collected = true;
-            score += collectibles[i].isSpecial ? 20 : 10;
-            scoreElement.textContent = `Score: ${score}`;
+            if (collectible.isSpecial) {
+              collectible.animationState = 'growing';
+              collectible.animationProgress = 0;
+            } else {
+              collectible.collected = true;
+              score += 10;
+            }
           }
+
+          if (collectible.animationState === 'growing') {
+            collectible.animationProgress += 0.05;
+            if (collectible.animationProgress >= 1) {
+              collectible.animationState = 'exploding';
+              collectible.animationProgress = 0;
+            }
+          } else if (collectible.animationState === 'exploding') {
+            collectible.animationProgress += 0.05;
+            if (collectible.animationProgress >= 1) {
+              collectible.collected = true;
+              score += 20;
+            }
+          }
+
           if (
-            collectibles[i].collected ||
-            collectibles[i].x + collectibles[i].width < cameraX - canvas.width
+            collectible.collected ||
+            collectible.x + collectible.width < cameraX - canvas.width
           ) {
             collectibles.splice(i, 1);
           }
         }
+        scoreElement.textContent = `Score: ${score}`;
       }
-
       function drawBackground() {
         // Calculate how many background tiles we need
         const bgWidth = canvas.width;
@@ -356,32 +379,35 @@
           if (!collectible.collected) {
             const screenX = collectible.x - cameraX;
             if (screenX + collectible.width > 0 && screenX < canvas.width) {
+              let size = collectible.width;
+              let alpha = 1;
+
+              if (collectible.animationState === 'growing') {
+                size *= 1 + collectible.animationProgress;
+              } else if (collectible.animationState === 'exploding') {
+                size *= 2 - collectible.animationProgress;
+                alpha = 1 - collectible.animationProgress;
+              }
+
+              ctx.globalAlpha = alpha;
               try {
                 ctx.drawImage(
                   collectible.isSpecial
                     ? specialCollectibleImg
                     : collectibleImg,
-                  screenX,
-                  collectible.y,
-                  collectible.width,
-                  collectible.height,
+                  screenX + (collectible.width - size) / 2,
+                  collectible.y + (collectible.height - size) / 2,
+                  size,
+                  size,
                 );
               } catch (e) {
-                ctx.beginPath();
-                ctx.arc(
-                  screenX + collectible.width / 2,
-                  collectible.y + collectible.height / 2,
-                  collectible.width / 2,
-                  0,
-                  Math.PI * 2,
-                );
-                ctx.fill();
+                // Fallback rendering if needed
               }
+              ctx.globalAlpha = 1;
             }
           }
         });
       }
-
       function drawSea() {
         ctx.fillStyle = 'rgba(30, 144, 255, 0.6)';
         ctx.fillRect(0, canvas.height - 50, canvas.width, 50);
