@@ -38,10 +38,12 @@
       const backgroundImg = new Image();
       const buoyImg = new Image();
       const collectibleImg = new Image();
+      const specialCollectibleImg = new Image();
 
       backgroundImg.src = './assets/windPark_retro.webp';
       buoyImg.src = './assets/buoyRendering.ico';
       collectibleImg.src = './assets/collectible_6.png';
+      specialCollectibleImg.src = './assets/collectible_7.png';
 
       // Obstacle images array
       const obstacleImgs = [];
@@ -77,9 +79,13 @@
         speed: 5,
         vy: 0,
         gravity: 0.5,
+        jumpsLeft: 2,
         jumpStrength: -15,
         isJumping: false,
       };
+
+      // Jump properties
+      const MAX_JUMP_HEIGHT = canvas.height / 2 - player.height - 20;
 
       // Arrays for obstacles and collectibles
       const obstacles = [];
@@ -98,9 +104,12 @@
 
       window.addEventListener('keydown', (e) => {
         keys[e.code] = true;
-        if ((e.code === 'Space' || e.code === 'ArrowUp') && !player.isJumping) {
+        if (
+          (e.code === 'Space' || e.code === 'ArrowUp') &&
+          player.jumpsLeft > 0
+        ) {
           player.vy = player.jumpStrength;
-          player.isJumping = true;
+          player.jumpsLeft--;
         }
       });
 
@@ -151,7 +160,7 @@
         if (player.y > groundLevel) {
           player.y = groundLevel;
           player.vy = 0;
-          player.isJumping = false;
+          player.jumpsLeft = 2; // Reset jumps when landing
         }
       }
 
@@ -195,6 +204,20 @@
         collectibles.push(collectible);
       }
 
+      function spawnSpecialCollectible() {
+        const specialCollectible = {
+          x: cameraX + canvas.width + Math.random() * 500,
+          y: canvas.height - MAX_JUMP_HEIGHT - COLLECTIBLE_SIZE,
+          width: COLLECTIBLE_SIZE,
+          height: COLLECTIBLE_SIZE,
+          speed: 3,
+          collected: false,
+          worldX: cameraX + canvas.width + Math.random() * 500,
+          isSpecial: true,
+        };
+        collectibles.push(specialCollectible);
+      }
+
       function updateObstacles() {
         for (let i = obstacles.length - 1; i >= 0; i--) {
           // Move obstacle left
@@ -233,13 +256,9 @@
 
       function updateCollectibles() {
         for (let i = collectibles.length - 1; i >= 0; i--) {
-          // Move collectible left
           collectibles[i].worldX -= collectibles[i].speed;
           collectibles[i].x = collectibles[i].worldX;
-
-          // Calculate screen position
           const screenX = collectibles[i].x - cameraX;
-
           if (
             !collectibles[i].collected &&
             checkCollision(
@@ -258,11 +277,9 @@
             )
           ) {
             collectibles[i].collected = true;
-            score += 10;
+            score += collectibles[i].isSpecial ? 20 : 10;
             scoreElement.textContent = `Score: ${score}`;
           }
-
-          // Remove if collected or far behind
           if (
             collectibles[i].collected ||
             collectibles[i].x + collectibles[i].width < cameraX - canvas.width
@@ -341,14 +358,15 @@
             if (screenX + collectible.width > 0 && screenX < canvas.width) {
               try {
                 ctx.drawImage(
-                  collectibleImg,
+                  collectible.isSpecial
+                    ? specialCollectibleImg
+                    : collectibleImg,
                   screenX,
                   collectible.y,
                   collectible.width,
                   collectible.height,
                 );
               } catch (e) {
-                ctx.fillStyle = 'gold';
                 ctx.beginPath();
                 ctx.arc(
                   screenX + collectible.width / 2,
@@ -404,10 +422,13 @@
       // Spawn objects periodically
       setInterval(() => {
         if (!gameOver) {
-          if (Math.random() < 0.5) {
+          const random = Math.random();
+          if (random < 0.4) {
             spawnObstacle();
-          } else {
+          } else if (random < 0.8) {
             spawnCollectible();
+          } else {
+            spawnSpecialCollectible();
           }
         }
       }, SPAWN_INTERVAL);
