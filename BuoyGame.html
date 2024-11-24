@@ -33,10 +33,37 @@
       Your browser does not support the audio element.
     </audio>
 
+    <audio id="collectibleSound">
+      <source src="./assets/pickupCoin.wav" type="audio/mpeg" />
+      Your browser does not support the audio element.
+    </audio>
+
+    <audio id="SpecialCollectibleSound">
+      <source src="./assets/powerUp.wav" type="audio/mpeg" />
+      Your browser does not support the audio element.
+    </audio>
+
+    <audio id="jumpSound">
+      <source src="./assets/jumpSound.mp3" type="audio/mpeg" />
+      Your browser does not support the audio element.
+    </audio>
+
+    <audio id="gameOverSound">
+      <source src="./assets/game-over.mp3" type="audio/mpeg" />
+      Your browser does not support the audio element.
+    </audio>
+
     <script>
       const canvas = document.getElementById('gameCanvas');
       const ctx = canvas.getContext('2d');
       const scoreElement = document.getElementById('score');
+      const soundtrack = document.getElementById('soundtrack');
+      const collectibleSound = document.getElementById('collectibleSound');
+      const SpecialCollectibleSound = document.getElementById(
+        'SpecialCollectibleSound',
+      );
+      const jumpSound = document.getElementById('jumpSound'); // Reference to the jump sound
+      const gameOverSound = document.getElementById('gameOverSound');
 
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
@@ -44,6 +71,8 @@
       // Play soundtrack on game start
       soundtrack.volume = 0.1; // Adjust volume as needed
       soundtrack.play();
+
+      jumpSound.volume = 0.1;
 
       // Load all images
       const backgroundImg = new Image();
@@ -124,6 +153,10 @@
         ) {
           player.vy = player.jumpStrength;
           player.jumpsLeft--;
+
+          // Play jump sound
+          jumpSound.currentTime = 0;
+          jumpSound.play();
         }
       });
 
@@ -179,6 +212,7 @@
 
         // Handle flip animation
         if (player.isFlipped) {
+          gameOverSound.play();
           player.flipProgress++;
           if (player.flipProgress >= player.flipDuration) {
             gameOver = true; // End the game after the flip
@@ -306,9 +340,15 @@
             if (collectible.isSpecial) {
               collectible.animationState = 'growing';
               collectible.animationProgress = 0;
+              // Play collectible sound
+              SpecialCollectibleSound.currentTime = 0; // Reset to the beginning of the sound
+              SpecialCollectibleSound.play();
             } else {
               collectible.collected = true;
               score += 10;
+              // Play collectible sound
+              collectibleSound.currentTime = 0; // Reset to the beginning of the sound
+              collectibleSound.play();
             }
           }
 
