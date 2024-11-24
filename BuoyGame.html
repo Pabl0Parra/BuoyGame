@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-  <!-- [Previous head and style sections remain the same] -->
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -40,17 +39,17 @@
       const buoyImg = new Image();
       const collectibleImg = new Image();
 
-      backgroundImg.src = 'windPark_retro.webp';
-      buoyImg.src = 'buoyRendering.ico';
-      collectibleImg.src = 'collectible_6.png';
+      backgroundImg.src = './assets/windPark_retro.webp';
+      buoyImg.src = './assets/buoyRendering.ico';
+      collectibleImg.src = './assets/collectible_6.png';
 
       // Obstacle images array
       const obstacleImgs = [];
       const obstacleImageSources = [
-        'obstacle_1.png',
-        'obstacle_2.png',
-        'obstacle_3.png',
-        'obstacle_4.png',
+        './assets/obstacle_1.png',
+        './assets/obstacle_2.png',
+        './assets/obstacle_3.png',
+        './assets/obstacle_4.png',
       ];
 
       // Load obstacle images
@@ -86,10 +85,12 @@
       const obstacles = [];
       const collectibles = [];
 
-      // Obstacle and collectible properties
+      // Obstacle properties
       const OBSTACLE_WIDTH = 100;
       const OBSTACLE_HEIGHT = 100;
-      const COLLECTIBLE_SIZE = 60;
+      const SMALL_OBSTACLE_WIDTH = 60;
+      const SMALL_OBSTACLE_HEIGHT = 60;
+      const COLLECTIBLE_SIZE = 60; // Collectibles remain the same size
       const SPAWN_INTERVAL = 2000;
 
       // Controls
@@ -155,14 +156,28 @@
       }
 
       function spawnObstacle() {
+        // Randomly select an obstacle image and get its index
+        const randomIndex = Math.floor(Math.random() * obstacleImgs.length);
+        const obstacleImg = obstacleImgs[randomIndex];
+
+        // Set obstacle size based on the image index
+        let width = OBSTACLE_WIDTH;
+        let height = OBSTACLE_HEIGHT;
+
+        if (randomIndex >= 2) {
+          // For obstacles 3 and 4, make them smaller
+          width = SMALL_OBSTACLE_WIDTH;
+          height = SMALL_OBSTACLE_HEIGHT;
+        }
+
         const obstacle = {
           x: cameraX + canvas.width + Math.random() * 500, // Spawn ahead of current view
           y: canvas.height - Math.random() * 200 - 50,
-          width: OBSTACLE_WIDTH,
-          height: OBSTACLE_HEIGHT,
+          width: width,
+          height: height,
           speed: 3 + Math.random() * 2,
           worldX: cameraX + canvas.width + Math.random() * 500,
-          img: obstacleImgs[Math.floor(Math.random() * obstacleImgs.length)], // Assign a random image
+          img: obstacleImg, // Assign the selected image
         };
         obstacles.push(obstacle);
       }
