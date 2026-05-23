@@ -113,6 +113,10 @@ export function applyPowerup(player, type, durationSeconds) {
 export function resizePlayer(player, viewport) {
   player.x = clamp(player.x, 10, viewport.width - player.width - 10);
   player.y = Math.min(player.y, groundY(viewport.height, player));
+  if (player.y === groundY(viewport.height, player)) {
+    player.isGrounded = true;
+    player.jumpsLeft = PLAYER.maxJumps;
+  }
 }
 
 export function hasPowerup(player, type) {

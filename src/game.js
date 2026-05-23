@@ -152,6 +152,7 @@ export function renderGame(game) {
 export function resizeGame(game) {
   resizeRenderer(game.renderer);
   resizePlayer(game.player, getViewport(game.renderer));
+  updateHud(game);
 }
 
 export function primaryAction(game) {

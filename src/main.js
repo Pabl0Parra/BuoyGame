@@ -47,6 +47,10 @@ window.addEventListener('resize', () => {
   resizeGame(game);
 });
 
+window.addEventListener('contextmenu', (event) => {
+  event.preventDefault();
+});
+
 window.addEventListener('keydown', (event) => {
   if ((game.state === 'start' || game.state === 'gameOver') && event.code === 'Space') {
     event.preventDefault();

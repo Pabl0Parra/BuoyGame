@@ -32,6 +32,7 @@ export function createInput(target = window, touchRoot = document) {
     const control = button.dataset.touch;
     const press = (event) => {
       event.preventDefault();
+      button.setPointerCapture?.(event.pointerId);
       if (control === 'left') input.left = true;
       if (control === 'right') input.right = true;
       if (control === 'jump') input.jumpPressed = true;
@@ -40,6 +41,9 @@ export function createInput(target = window, touchRoot = document) {
       event.preventDefault();
       if (control === 'left') input.left = false;
       if (control === 'right') input.right = false;
+      if (button.hasPointerCapture?.(event.pointerId)) {
+        button.releasePointerCapture(event.pointerId);
+      }
     };
     button.addEventListener('pointerdown', press);
     button.addEventListener('pointerup', release);
