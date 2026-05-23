@@ -30,7 +30,7 @@ export function getDifficulty(distance) {
 export function spawnPattern(spawner, context) {
   const difficulty = getDifficulty(context.distance);
   const x =
-    context.cameraX +
+    (context.cameraX ?? 0) +
     context.viewport.width +
     120 +
     spawner.patternIndex * difficulty.spacing;
