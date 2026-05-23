@@ -97,6 +97,23 @@ export function drawPlayer(renderer, player, time = 0) {
     ctx.restore();
   }
 
+  if (hasPowerup(player, 'boost')) {
+    ctx.save();
+    ctx.fillStyle = 'rgba(255, 124, 92, 0.42)';
+    ctx.beginPath();
+    ctx.ellipse(
+      player.x - 8,
+      player.y + player.height / 2 + bob,
+      player.width * 0.45,
+      player.height * 0.32,
+      0,
+      0,
+      Math.PI * 2,
+    );
+    ctx.fill();
+    ctx.restore();
+  }
+
   const image = assets.images.player;
   if (image?.loaded) {
     ctx.drawImage(image.image, player.x, player.y + bob, player.width, player.height);

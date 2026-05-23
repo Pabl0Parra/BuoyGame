@@ -16,6 +16,7 @@ export function createAudioController(assetManifest) {
       .map(([key, src]) => [key, createAudio(src, EFFECT_VOLUMES[key] ?? 0.3)]),
   );
   let muted = mutedFromStorage;
+  const lastPlayed = new Map();
 
   setAllMuted(music, effects, muted);
 
@@ -36,6 +37,10 @@ export function createAudioController(assetManifest) {
     },
     playEffect(name) {
       if (muted || !effects[name]) return;
+      const now = performance.now();
+      const last = lastPlayed.get(name) ?? 0;
+      if (now - last < 45) return;
+      lastPlayed.set(name, now);
       const effect = effects[name].cloneNode();
       effect.volume = effects[name].volume;
       effect.play().catch(() => {});

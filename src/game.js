@@ -300,6 +300,17 @@ function updateHud(game) {
   game.hud.best.textContent = String(Math.floor(game.scoring.bestScore));
   game.hud.combo.textContent = `x${game.scoring.multiplier}`;
   game.hud.comboMeter.style.width = `${Math.max(0, comboRatio) * 100}%`;
+  if (game.hud.powerup) {
+    const active = [];
+    if (game.player.shieldCharges > 0) active.push('Shield');
+    if (hasPowerup(game.player, 'magnet')) {
+      active.push(`Magnet ${Math.ceil(game.player.powerups.magnet)}s`);
+    }
+    if (hasPowerup(game.player, 'boost')) {
+      active.push(`Boost ${Math.ceil(game.player.powerups.boost)}s`);
+    }
+    game.hud.powerup.textContent = active.length ? active.join(' / ') : 'None';
+  }
 }
 
 function updateOverlay(game) {

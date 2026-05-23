@@ -17,6 +17,7 @@ const hud = {
   score: document.getElementById('scoreValue'),
   best: document.getElementById('bestValue'),
   combo: document.getElementById('comboValue'),
+  powerup: document.getElementById('powerupValue'),
   comboMeter: document.getElementById('comboMeter'),
   overlay: document.getElementById('overlay'),
   overlayText: document.getElementById('overlayText'),
