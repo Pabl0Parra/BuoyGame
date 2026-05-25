@@ -3,6 +3,7 @@ export function createInput(target = window, touchRoot = document) {
     left: false,
     right: false,
     jumpPressed: false,
+    shootPressed: false,
     pausePressed: false,
     mutePressed: false,
   };
@@ -12,6 +13,10 @@ export function createInput(target = window, touchRoot = document) {
     if (event.code === 'ArrowRight' || event.code === 'KeyD') input.right = true;
     if (event.code === 'Space' || event.code === 'ArrowUp' || event.code === 'KeyW') {
       input.jumpPressed = true;
+      event.preventDefault();
+    }
+    if (event.code === 'KeyF') {
+      input.shootPressed = true;
       event.preventDefault();
     }
     if (event.code === 'KeyP') input.pausePressed = true;
@@ -36,6 +41,7 @@ export function createInput(target = window, touchRoot = document) {
       if (control === 'left') input.left = true;
       if (control === 'right') input.right = true;
       if (control === 'jump') input.jumpPressed = true;
+      if (control === 'shoot') input.shootPressed = true;
     };
     const release = (event) => {
       event.preventDefault();
@@ -57,6 +63,7 @@ export function createInput(target = window, touchRoot = document) {
     consumeFrame() {
       const frame = { ...input };
       input.jumpPressed = false;
+      input.shootPressed = false;
       input.pausePressed = false;
       input.mutePressed = false;
       return frame;

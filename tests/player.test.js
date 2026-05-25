@@ -5,6 +5,7 @@ import {
   createPlayer,
   damagePlayer,
   jumpPlayer,
+  shootLaser,
   updatePlayer,
 } from '../src/player.js';
 
@@ -71,4 +72,22 @@ test('magnet and boost timers expire during update', () => {
 
   assert.equal(player.powerups.magnet, 0);
   assert.equal(player.powerups.boost, 0);
+});
+
+test('gun powerup grants ammo and shooting consumes one shot', () => {
+  const player = createPlayer(viewport);
+
+  applyPowerup(player, 'gun');
+  const laser = shootLaser(player);
+
+  assert.equal(player.weapon.ammo, 2);
+  assert.equal(laser.type, 'laser');
+  assert.equal(laser.x > player.x, true);
+  assert.equal(laser.vx > 0, true);
+});
+
+test('shooting without ammo does not create a laser', () => {
+  const player = createPlayer(viewport);
+
+  assert.equal(shootLaser(player), null);
 });

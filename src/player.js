@@ -1,4 +1,5 @@
 import { PLAYER, POWERUPS } from './config.js';
+import { createLaser } from './entities.js';
 
 export function createPlayer(viewport) {
   const player = {
@@ -17,6 +18,10 @@ export function createPlayer(viewport) {
     powerups: {
       magnet: 0,
       boost: 0,
+    },
+    weapon: {
+      ammo: 0,
+      cooldown: 0,
     },
   };
 
@@ -69,6 +74,7 @@ export function updatePlayer(player, input, deltaSeconds, world) {
     0,
     player.invulnerableTimer - deltaSeconds,
   );
+  player.weapon.cooldown = Math.max(0, player.weapon.cooldown - deltaSeconds);
 }
 
 export function jumpPlayer(player) {
@@ -102,12 +108,31 @@ export function applyPowerup(player, type, durationSeconds) {
     return;
   }
 
+  if (type === 'gun') {
+    player.weapon.ammo += POWERUPS.gun.ammo;
+    return;
+  }
+
   if (type in player.powerups) {
     player.powerups[type] = Math.max(
       player.powerups[type],
       durationSeconds ?? POWERUPS[type].duration,
     );
   }
+}
+
+export function shootLaser(player) {
+  if (player.weapon.ammo <= 0 || player.weapon.cooldown > 0) {
+    return null;
+  }
+
+  player.weapon.ammo -= 1;
+  player.weapon.cooldown = POWERUPS.gun.cooldown;
+
+  return createLaser({
+    x: player.x + player.width - 4,
+    y: player.y + player.height * 0.42,
+  });
 }
 
 export function resizePlayer(player, viewport) {

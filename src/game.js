@@ -19,6 +19,7 @@ import {
   hasPowerup,
   jumpPlayer,
   resizePlayer,
+  shootLaser,
   updatePlayer,
 } from './player.js';
 import { createSpawner, spawnPattern } from './spawner.js';
@@ -30,6 +31,7 @@ import {
   drawParticles,
   drawPlayer,
   drawSea,
+  drawWaterIntegrationOverlay,
   resizeRenderer,
 } from './renderer.js';
 
@@ -50,6 +52,7 @@ export function createGame(dependencies) {
     hazards: [],
     collectibles: [],
     powerups: [],
+    lasers: [],
     particles: [],
     floatingText: [],
     distance: 0,
@@ -113,6 +116,15 @@ export function updateGame(game, deltaSeconds) {
     game.audio.playEffect('jump');
   }
 
+  if (input.shootPressed) {
+    const laser = shootLaser(game.player);
+    if (laser) {
+      game.lasers.push(laser);
+      addText(game, laser.x + 18, laser.y - 8, 'PEW');
+      game.audio.playEffect('special');
+    }
+  }
+
   updatePlayer(
     game.player,
     { ...input, jumpPressed: false },
@@ -138,11 +150,18 @@ export function renderGame(game) {
   drawSea(game.renderer, game.time);
   drawEntities(
     game.renderer,
-    [...game.hazards, ...game.collectibles, ...game.powerups, ...game.floatingText],
+    [
+      ...game.hazards,
+      ...game.collectibles,
+      ...game.powerups,
+      ...game.lasers,
+      ...game.floatingText,
+    ],
     game.time,
   );
   drawParticles(game.renderer, game.particles);
   drawPlayer(game.renderer, game.player, game.time);
+  drawWaterIntegrationOverlay(game.renderer, game.player, game.time);
 
   if (game.state !== 'playing') {
     drawOverlayBackdrop(game.renderer);
@@ -171,6 +190,7 @@ function resetRun(game) {
   game.hazards = [];
   game.collectibles = [];
   game.powerups = [];
+  game.lasers = [];
   game.particles = [];
   game.floatingText = [];
   game.distance = 0;
@@ -199,6 +219,7 @@ function updateEntities(game, deltaSeconds) {
   moveEntities(game, deltaSeconds);
   collectItems(game);
   checkHazards(game);
+  checkLaserHits(game);
   updateTransient(game.particles, deltaSeconds);
   updateTransient(game.floatingText, deltaSeconds);
   removeOffscreen(game);
@@ -216,6 +237,10 @@ function moveEntities(game, deltaSeconds) {
   }
   for (const powerup of game.powerups) {
     powerup.x -= game.worldSpeed * deltaSeconds;
+  }
+  for (const laser of game.lasers) {
+    laser.x += laser.vx * deltaSeconds;
+    laser.life -= deltaSeconds;
   }
 }
 
@@ -288,6 +313,9 @@ function removeOffscreen(game) {
   game.powerups = game.powerups.filter(
     (item) => !item.collected && item.x + item.width > -80,
   );
+  game.lasers = game.lasers.filter(
+    (item) => !item.spent && item.life > 0 && item.x < getViewport(game.renderer).width + 80,
+  );
   game.particles = game.particles.filter((item) => item.life > 0);
   game.floatingText = game.floatingText.filter((item) => item.life > 0);
 }
@@ -310,8 +338,28 @@ function updateHud(game) {
     if (hasPowerup(game.player, 'boost')) {
       active.push(`Boost ${Math.ceil(game.player.powerups.boost)}s`);
     }
+    if (game.player.weapon.ammo > 0) {
+      active.push(`Gun ${game.player.weapon.ammo}`);
+    }
     game.hud.powerup.textContent = active.length ? active.join(' / ') : 'None';
   }
+}
+
+function checkLaserHits(game) {
+  for (const laser of game.lasers) {
+    if (laser.spent) continue;
+
+    const hazard = game.hazards.find((item) => intersects(laser, item));
+    if (!hazard) continue;
+
+    laser.spent = true;
+    hazard.destroyed = true;
+    addText(game, hazard.x + hazard.width / 2, hazard.y, 'BLAST');
+    addBurst(game, hazard.x + hazard.width / 2, hazard.y + hazard.height / 2, '#ff4fd8');
+    game.audio.playEffect('special');
+  }
+
+  game.hazards = game.hazards.filter((hazard) => !hazard.destroyed);
 }
 
 function updateOverlay(game) {

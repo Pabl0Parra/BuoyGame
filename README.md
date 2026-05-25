@@ -19,10 +19,11 @@ Then visit `http://localhost:4173`.
 - `ArrowLeft` / `A`: move left
 - `ArrowRight` / `D`: move right
 - `Space` / `ArrowUp` / `W`: jump
+- `F`: shoot after collecting the gun
 - `P`: pause or resume
 - `M`: mute or unmute
 
-On touch screens, use the on-screen left, jump, and right controls.
+On touch screens, use the on-screen left, jump, shoot, and right controls.
 
 ## Tests
 

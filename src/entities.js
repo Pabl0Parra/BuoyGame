@@ -1,4 +1,4 @@
-import { SPAWNING } from './config.js';
+import { LASER, PLAYER, SPAWNING, WORLD } from './config.js';
 
 let nextEntityId = 1;
 
@@ -64,6 +64,21 @@ export function createParticle(options) {
   };
 }
 
+export function createLaser(options) {
+  return {
+    id: nextId('laser'),
+    type: 'laser',
+    x: options.x,
+    y: options.y,
+    width: options.width ?? LASER.width,
+    height: options.height ?? LASER.height,
+    vx: options.vx ?? LASER.speed,
+    life: options.life ?? LASER.life,
+    maxLife: options.life ?? LASER.life,
+    spent: false,
+  };
+}
+
 export function createFloatingText(options) {
   return {
     id: nextId('text'),
@@ -78,15 +93,28 @@ export function createFloatingText(options) {
 }
 
 export function laneY(lane, viewportHeight) {
-  const playableTop = Math.max(118, viewportHeight * 0.18);
-  const playableBottom = viewportHeight - 116;
+  const band = getPlayableBand(viewportHeight);
   const laneCount = SPAWNING.lanes;
-  const step = (playableBottom - playableTop) / Math.max(1, laneCount - 1);
-  return playableTop + lane * step;
+  const step = (band.bottom - band.top) / Math.max(1, laneCount - 1);
+  return band.top + clampLane(lane) * step;
+}
+
+export function getPlayableBand(viewportHeight) {
+  const groundTop = viewportHeight - PLAYER.height - PLAYER.groundPadding;
+  const bottom = Math.min(
+    viewportHeight - WORLD.seaHeight - 34,
+    groundTop + PLAYER.height * 0.45,
+  );
+  const top = Math.max(156, bottom - PLAYER.reachableAirBand);
+  return { top, bottom };
 }
 
 function nextId(prefix) {
   const id = `${prefix}-${nextEntityId}`;
   nextEntityId += 1;
   return id;
+}
+
+function clampLane(lane) {
+  return Math.max(0, Math.min(SPAWNING.lanes - 1, lane));
 }

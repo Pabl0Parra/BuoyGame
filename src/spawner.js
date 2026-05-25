@@ -6,7 +6,7 @@ import {
   laneY,
 } from './entities.js';
 
-const POWERUP_TYPES = ['shield', 'magnet', 'boost'];
+const POWERUP_TYPES = ['shield', 'magnet', 'boost', 'gun'];
 
 export function createSpawner(random = Math.random) {
   return {
@@ -63,7 +63,9 @@ export function spawnPattern(spawner, context) {
       ? [
           createPowerup({
             powerupType:
-              POWERUP_TYPES[spawner.patternIndex % POWERUP_TYPES.length],
+              spawner.random() < 0.25
+                ? 'gun'
+                : POWERUP_TYPES[spawner.patternIndex % POWERUP_TYPES.length],
             lane: safeLane,
             x: x + 190,
             y: laneY(safeLane, context.viewport.height),
@@ -126,7 +128,7 @@ export function spawnHazardPattern(context) {
 function normalizeBlockedLanes(lanes) {
   const unique = [...new Set(lanes.map((lane) => clampLane(lane)))];
   if (unique.length >= SPAWNING.lanes) {
-    unique.pop();
+    unique.shift();
   }
   return unique;
 }

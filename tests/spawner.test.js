@@ -7,6 +7,8 @@ import {
   spawnHazardPattern,
   spawnPattern,
 } from '../src/spawner.js';
+import { SPAWNING } from '../src/config.js';
+import { getPlayableBand, laneY } from '../src/entities.js';
 
 const context = {
   distance: 500,
@@ -56,9 +58,36 @@ test('powerups are generated less often than normal collectibles', () => {
   assert.equal(collectibleCount > powerupCount, true);
 });
 
+test('gun can spawn as a rare powerup', () => {
+  const spawner = createSpawner(() => 0.05);
+
+  const pattern = spawnPattern(spawner, context);
+
+  assert.equal(pattern.powerups.some((powerup) => powerup.powerupType === 'gun'), true);
+});
+
 test('collectible lines place items in one lane', () => {
   const line = spawnCollectibleLine({ ...context, lane: 2, count: 4 });
 
   assert.equal(line.length, 4);
   assert.equal(line.every((item) => item.lane === 2), true);
+});
+
+test('playable lanes stay inside the buoy jump band', () => {
+  const band = getPlayableBand(context.viewport.height);
+  const laneCenters = Array.from({ length: SPAWNING.lanes }, (_, lane) =>
+    laneY(lane, context.viewport.height),
+  );
+
+  assert.equal(laneCenters.every((y) => y >= band.top && y <= band.bottom), true);
+});
+
+test('hazards do not spawn in unreachable top-screen space', () => {
+  const band = getPlayableBand(context.viewport.height);
+  const hazards = spawnHazardPattern({
+    ...context,
+    blockedLaneRolls: [0, 1, 2, 3],
+  });
+
+  assert.equal(hazards.every((hazard) => hazard.y >= band.top - 70), true);
 });
